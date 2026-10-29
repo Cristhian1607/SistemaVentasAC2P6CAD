@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "API de análisis de ventas",
+    "description": "Pruebas básicas para la API de la actividad. Cambia baseUrl si la consola de .NET muestra otro puerto.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5169"
+    }
+  ],
+  "item": [
+    {
+      "name": "Raíz / modo de ejecución",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/"
+      }
+    },
+    {
+      "name": "Listar ventas",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/ventas"
+      }
+    },
+    {
+      "name": "Reporte completo",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/reporte"
+      }
+    },
+    {
+      "name": "Resumen",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/resumen"
+      }
+    },
+    {
+      "name": "Productos más vendidos",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/productos-mas-vendidos"
+      }
+    },
+    {
+      "name": "Ingresos por categoría",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/ingresos-por-categoria"
+      }
+    },
+    {
+      "name": "Ventas por ciudad",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/ventas-por-ciudad"
+      }
+    },
+    {
+      "name": "Desempeño de vendedores",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/analisis/vendedores"
+      }
+    },
+    {
+      "name": "Cargar ventas de ejemplo (colección vacía)",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/ventas/cargar-ejemplo"
+      }
+    }
+  ]
+}

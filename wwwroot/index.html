@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de análisis de ventas</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --fondo: #f3f6fb;
+      --texto: #172033;
+      --suave: #68748a;
+      --borde: #e5eaf2;
+      --azul: #3158d5;
+      --verde: #138a68;
+      --sombra: 0 8px 26px rgb(28 43 75 / 7%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: var(--texto);
+      font: 15px/1.5 "Segoe UI", Arial, sans-serif;
+    }
+
+    header {
+      padding: 28px max(24px, calc((100% - 1180px) / 2));
+      background: #17294b;
+      color: white;
+    }
+
+    header p { margin: 4px 0 0; color: #c5d0e5; }
+    h1 { margin: 0; font-size: 25px; }
+    main { max-width: 1180px; margin: 28px auto; padding: 0 20px 40px; }
+    .fila { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .estado { color: var(--suave); font-size: 13px; }
+
+    .boton {
+      padding: 10px 15px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--azul);
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .boton:hover { background: #2446b5; }
+    .tarjetas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 20px 0; }
+    .tarjeta, .seccion {
+      border: 1px solid var(--borde);
+      border-radius: 13px;
+      background: white;
+      box-shadow: var(--sombra);
+    }
+
+    .tarjeta { padding: 18px; }
+    .tarjeta span { display: block; color: var(--suave); font-size: 13px; }
+    .tarjeta strong { display: block; margin-top: 7px; font-size: 24px; }
+    .rejilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .seccion { overflow: hidden; }
+    .seccion h2 { margin: 0; padding: 17px 18px; border-bottom: 1px solid var(--borde); font-size: 16px; }
+    .contenido { padding: 8px 18px 16px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+    th { color: var(--suave); font-size: 12px; font-weight: 600; }
+    td:last-child, th:last-child { text-align: right; }
+    .conclusiones { margin: 0; padding: 10px 18px 18px 38px; }
+    .conclusiones li { margin: 7px 0; }
+    .mensaje { padding: 28px; color: var(--suave); text-align: center; }
+    .ok { color: var(--verde); }
+
+    @media (max-width: 780px) {
+      .tarjetas { grid-template-columns: repeat(2, 1fr); }
+      .rejilla { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 440px) {
+      .tarjetas { grid-template-columns: 1fr 1fr; gap: 9px; }
+      .tarjeta { padding: 13px; }
+      .tarjeta strong { font-size: 19px; }
+      .fila { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Panel de análisis de ventas</h1>
+    <p>Resumen comercial de las ventas completadas</p>
+  </header>
+
+  <main>
+    <div class="fila">
+      <div id="estado" class="estado">Cargando datos...</div>
+      <button id="actualizar" class="boton" type="button">Actualizar reporte</button>
+    </div>
+    <div id="panel" class="mensaje">Consultando la API...</div>
+  </main>
+
+  <script>
+    const moneda = new Intl.NumberFormat("es-CR", {
+      style: "currency",
+      currency: "CRC",
+      maximumFractionDigits: 0
+    });
+    const numero = new Intl.NumberFormat("es-CR");
+
+    function textoSeguro(valor) {
+      return String(valor).replace(/[&<>"']/g, caracter => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[caracter]);
+    }
+
+    function crearTabla(columnas, filas) {
+      if (!filas.length) return '<p class="estado">No hay datos para mostrar.</p>';
+
+      const encabezado = columnas.map(columna => `<th>${columna.titulo}</th>`).join("");
+      const contenido = filas.map(fila =>
+        `<tr>${columnas.map(columna => `<td>${columna.formato(fila)}</td>`).join("")}</tr>`
+      ).join("");
+
+      return `<table><thead><tr>${encabezado}</tr></thead><tbody>${contenido}</tbody></table>`;
+    }
+
+    function mostrarSeccion(titulo, columnas, filas) {
+      return `<section class="seccion"><h2>${titulo}</h2><div class="contenido">${crearTabla(columnas, filas)}</div></section>`;
+    }
+
+    async function cargarReporte() {
+      const estado = document.getElementById("estado");
+      const panel = document.getElementById("panel");
+      estado.textContent = "Actualizando reporte...";
+
+      try {
+        const respuesta = await fetch("/api/analisis/reporte");
+        if (!respuesta.ok) throw new Error(`Error HTTP ${respuesta.status}`);
+        const reporte = await respuesta.json();
+        const resumen = reporte.resumen;
+
+        panel.className = "";
+        panel.innerHTML = `
+          <div class="tarjetas">
+            <section class="tarjeta"><span>Facturación total</span><strong>${moneda.format(resumen.facturacionTotal)}</strong></section>
+            <section class="tarjeta"><span>Ticket promedio</span><strong>${moneda.format(resumen.ticketPromedio)}</strong></section>
+            <section class="tarjeta"><span>Ventas completadas</span><strong>${numero.format(resumen.ventasCompletadas)} de ${numero.format(resumen.cantidadVentas)}</strong></section>
+            <section class="tarjeta"><span>Ciudades atendidas</span><strong>${numero.format(resumen.ciudadesAtendidas)}</strong></section>
+          </div>
+          <div class="rejilla">
+            ${mostrarSeccion("Productos más vendidos", [
+              { titulo: "Producto", formato: fila => textoSeguro(fila.nombre) },
+              { titulo: "Unidades", formato: fila => numero.format(fila.unidadesVendidas) },
+              { titulo: "Ingresos", formato: fila => moneda.format(fila.ingresos) }
+            ], reporte.productosMasVendidos)}
+            ${mostrarSeccion("Ingresos por categoría", [
+              { titulo: "Categoría", formato: fila => textoSeguro(fila.categoria) },
+              { titulo: "Unidades", formato: fila => numero.format(fila.unidadesVendidas) },
+              { titulo: "Ingresos", formato: fila => moneda.format(fila.ingresos) }
+            ], reporte.ingresosPorCategoria)}
+            ${mostrarSeccion("Ventas por ciudad", [
+              { titulo: "Ciudad", formato: fila => textoSeguro(fila.ciudad) },
+              { titulo: "Ventas", formato: fila => numero.format(fila.cantidadVentas) },
+              { titulo: "Facturación", formato: fila => moneda.format(fila.facturacion) }
+            ], reporte.ventasPorCiudad)}
+            ${mostrarSeccion("Desempeño de vendedores", [
+              { titulo: "Vendedor", formato: fila => textoSeguro(fila.nombre) },
+              { titulo: "Ventas", formato: fila => numero.format(fila.ventasCompletadas) },
+              { titulo: "Facturación", formato: fila => moneda.format(fila.facturacion) }
+            ], reporte.desempenoVendedores)}
+            <section class="seccion">
+              <h2>Conclusiones</h2>
+              <ul class="conclusiones">${reporte.conclusiones.map(item => `<li>${textoSeguro(item)}</li>`).join("")}</ul>
+            </section>
+          </div>`;
+        estado.innerHTML = `<span class="ok">●</span> Reporte actualizado · ${resumen.ventasCompletadas} ventas completadas`;
+      } catch (error) {
+        panel.className = "mensaje";
+        panel.textContent = "No se pudo cargar el reporte. Confirma que la API esté ejecutándose y vuelve a intentarlo.";
+        estado.textContent = error.message;
+      }
+    }
+
+    document.getElementById("actualizar").addEventListener("click", cargarReporte);
+    cargarReporte();
+  </script>
+</body>
+</html>
